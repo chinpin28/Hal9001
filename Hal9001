@@ -1,60 +1,58 @@
 /*
  * HAL 9001: Crew Support Simulator
- * Description: A console-based space management game where the player acts as
- *              HAL 9001, an AI support system helping a spaceship crew survive
- *              a 30-day mission by managing wellness, tasks, resources, and morale.
- *              Version 2.0 adds a Workout Planner, Meal Tracker, Rest Planner,
- *              Crop Care System, Crew Check-In, improved visuals, and HAL voice lines.
- * Author:      [Your Name]
- * Version:     2.0
- * Date:        2025
+ * Description: A console-based space management game where the player acts as HAL 9001, a simulated support system helping a spaceship crew
+ *              survive a 30-day mission by managing wellness, tasks, resources, meals, workouts, rest, crops, emergencies, and morale.
+ * Author:      Sarmistha Pal
+ * Version:     (May 10th, 2026)
+ * Date:        May 2026
  */
 
 import java.util.Scanner;
 import java.util.Random;
 import java.util.InputMismatchException;
 
-public class Hal9001Game {
+public class Hal9001Game
+{
+    // Scanner and Random
+    static Scanner sc = new Scanner(System.in);
+    static Random rng = new Random();
 
-    // -------------------------------------------------------------------------
-    // GLOBAL SCANNER AND RANDOM
-    // -------------------------------------------------------------------------
-    static Scanner sc  = new Scanner(System.in);
-    static Random  rng = new Random();
+    // ANSI colours
+    static final String RESET = "\u001B[0m";
+    static final String BOLD = "\u001B[1m";
+    static final String DIM = "\u001B[2m";
+    static final String RED = "\u001B[31m";
+    static final String GREEN = "\u001B[32m";
+    static final String YELLOW = "\u001B[33m";
+    static final String BLUE = "\u001B[34m";
+    static final String PURPLE = "\u001B[35m";
+    static final String CYAN = "\u001B[36m";
+    static final String WHITE = "\u001B[37m";
 
-    // -------------------------------------------------------------------------
-    // SHIP RESOURCES  (0 - 100)
-    // -------------------------------------------------------------------------
+    // Ship resources
     static int intOxygen = 80;
-    static int intFood   = 80;
-    static int intWater  = 80;
-    static int intCrops  = 70;
+    static int intFood = 80;
+    static int intWater = 80;
+    static int intCrops = 70;
     static int intMorale = 70;
 
-    // -------------------------------------------------------------------------
-    // MISSION STATE
-    // -------------------------------------------------------------------------
-    static int     intMissionDay = 1;
-    static boolean bolGameOver   = false;
+    // Mission state
+    static int intMissionDay = 1;
+    static boolean bolGameOver = false;
 
-    // -------------------------------------------------------------------------
-    // CREW ARRAYS  (max 10 crewmates)
-    // -------------------------------------------------------------------------
+    // Crew arrays
     static int intCrewCount = 0;
+    static String[] arrNames = new String[10];
+    static String[] arrIDs = new String[10];
+    static char[] chrShifts = new char[10];
+    static int[] intMood = new int[10];
+    static int[] intEnergy = new int[10];
+    static int[] intStress = new int[10];
+    static int[] intHunger = new int[10];
+    static int[] intHealth = new int[10];
+    static int[] intTasksToday = new int[10];
 
-    static String[] arrNames      = new String[10];
-    static String[] arrIDs        = new String[10];
-    static char[]   chrShifts     = new char[10];   // 'A' or 'B'
-    static int[]    intMood       = new int[10];     // 0 - 10
-    static int[]    intEnergy     = new int[10];     // 0 - 10
-    static int[]    intStress     = new int[10];     // 0 - 10
-    static int[]    intHunger     = new int[10];     // 0 - 10
-    static int[]    intHealth     = new int[10];     // 0 - 10
-    static int[]    intTasksToday = new int[10];     // 0 - 2
-
-    // -------------------------------------------------------------------------
-    // JOURNAL QUOTES
-    // -------------------------------------------------------------------------
+    // Journal quotes
     static String[] arrJournalQuotes = {
         "I miss seeing real sunlight.",
         "The stars look peaceful today.",
@@ -68,257 +66,313 @@ public class Hal9001Game {
         "We are further from Earth than any human has been. That means something."
     };
 
-    // =========================================================================
-    // MAIN METHOD
-    // =========================================================================
-    public static void main(String[] args) {
-
+    public static void main(String[] args)
+    {
+        clearScreen();
         printIntro();
 
-        // --- Difficulty ---
-        printBoxHeader("SELECT DIFFICULTY");
-        System.out.println("  1. Easy   (higher starting resources)");
-        System.out.println("  2. Normal (medium starting resources)");
-        System.out.println("  3. Hard   (lower starting resources)");
-        int intDifficulty = getIntInRange(sc, "  Enter choice (1-3): ", 1, 3);
+        printBoxHeader("SELECT DIFFICULTY", CYAN);
+        System.out.println(button("1", "Easy   - higher starting resources"));
+        System.out.println(button("2", "Normal - medium starting resources"));
+        System.out.println(button("3", "Hard   - lower starting resources"));
+        int intDifficulty = getIntInRange(sc, CYAN + "\n  Enter choice (1-3): " + RESET, 1, 3);
         applyDifficulty(intDifficulty);
 
-        // --- Crew setup ---
-        printBoxHeader("CREW REGISTRATION");
+        printBoxHeader("CREW REGISTRATION", CYAN);
         intCrewCount = getIntInRange(sc, "  How many crewmates? (1-10): ", 1, 10);
         setupCrew();
 
         halSay("Crew registered. HAL 9001 fully online. Mission beginning on Day 1.");
         pressEnter();
 
-        // =====================================================================
-        // MAIN GAME LOOP
-        // =====================================================================
-        while (!bolGameOver) {
-
-            // Win check
-            if (intMissionDay > 30) {
+        while (!bolGameOver)
+        {
+            if (intMissionDay > 30)
+            {
                 printVictory();
                 bolGameOver = true;
                 break;
             }
 
-            // Loss check
             String strLossReason = checkLossConditions();
-            if (strLossReason != null) {
+            if (strLossReason != null)
+            {
                 printLoss(strLossReason);
                 bolGameOver = true;
                 break;
             }
 
-            // Critical resource warnings printed before main menu
+            clearScreen();
             printResourceWarnings();
-
+            printDashboard();
             printDayHeader();
-            char chrChoice = getCharChoice(sc, "  Enter choice: ");
 
-            switch (chrChoice) {
-                case 'A': viewCrewStatus();     break;
-                case 'B': viewShipResources();  break;
-                case 'C': offerDailyTask();     break;
-                case 'D': scheduleRecreation(); break;
-                case 'E': halRecommendations(); break;
-                case 'F': crewSupportEvent();   break;
-                case 'G': emergencyEvent();     break;
-                case 'H': crewJournalEntry();   break;
-                case 'I': endMissionDay();      break;
+            char chrChoice = getCharChoice(sc, CYAN + "\n  Select button A-O: " + RESET);
+
+            clearScreen();
+
+            switch (chrChoice)
+            {
+                case 'A':
+                    viewCrewStatus();
+                    break;
+                case 'B':
+                    viewShipResources();
+                    break;
+                case 'C':
+                    offerDailyTask();
+                    break;
+                case 'D':
+                    scheduleRecreation();
+                    break;
+                case 'E':
+                    halRecommendations();
+                    break;
+                case 'F':
+                    crewSupportEvent();
+                    break;
+                case 'G':
+                    emergencyEvent();
+                    break;
+                case 'H':
+                    crewJournalEntry();
+                    break;
+                case 'I':
+                    endMissionDay();
+                    break;
                 case 'J':
                     halSay("Initiating shutdown sequence. Safe travels, crew.");
                     bolGameOver = true;
                     break;
-                // --- NEW FEATURES ---
-                case 'K': workoutPlanner();     break;
-                case 'L': mealTracker();        break;
-                case 'M': restPlanner();        break;
-                case 'N': cropCareSystem();     break;
-                case 'O': crewCheckIn();        break;
+                case 'K':
+                    workoutPlanner();
+                    break;
+                case 'L':
+                    mealTracker();
+                    break;
+                case 'M':
+                    restPlanner();
+                    break;
+                case 'N':
+                    cropCareSystem();
+                    break;
+                case 'O':
+                    crewCheckIn();
+                    break;
                 default:
                     halSay("Unrecognized command. Please choose A through O.");
             }
 
-            if (!bolGameOver) pressEnter();
+            if (!bolGameOver)
+            {
+                pressEnter();
+            }
         }
 
-        System.out.println("\n  [ HAL 9001 OFFLINE ]\n");
+        System.out.println("\n  " + RED + "[ HAL 9001 OFFLINE ]" + RESET + "\n");
         sc.close();
     }
 
-    // =========================================================================
-    // SETUP METHODS
-    // =========================================================================
-
-    /** Prints the ASCII intro / splash screen. */
-    static void printIntro() {
-        System.out.println();
-        System.out.println("  +---------------------------------------------------------+");
-        System.out.println("  |         H A L   9 0 0 1   :   O N L I N E              |");
-        System.out.println("  |         C R E W   S U P P O R T   S Y S T E M          |");
-        System.out.println("  +---------------------------------------------------------+");
-        System.out.println("  |                                                         |");
-        System.out.println("  |          *          .          .    *      .            |");
-        System.out.println("  |    .         .   __|__   .         .           .        |");
-        System.out.println("  |         .      /  |  \\         .       .                |");
-        System.out.println("  |    .          /===|===\\    .                  *          |");
-        System.out.println("  |              |   HAL   |        .       .                |");
-        System.out.println("  |    .         |  [O_O]  |   .                    .        |");
-        System.out.println("  |         *    |_________|                  .              |");
-        System.out.println("  |              /   | |   \\      *    .           .         |");
-        System.out.println("  |    .        /    | |    \\                 .              |");
-        System.out.println("  |            /_____|_|_____\\  .       *             .      |");
-        System.out.println("  |                                                         |");
-        System.out.println("  |   \"Good morning. I am HAL 9001. I am here to help.\"    |");
-        System.out.println("  +---------------------------------------------------------+");
-        System.out.println();
+    static void printIntro()
+    {
+        System.out.println(CYAN + BOLD);
+        System.out.println("  +================================================================+");
+        System.out.println("  |              H A L   9 0 0 1   :   O N L I N E                 |");
+        System.out.println("  |              C R E W   S U P P O R T   S Y S T E M             |");
+        System.out.println("  +================================================================+");
+        System.out.println("  |                                                                |");
+        System.out.println("  |          *          .          .    *      .                   |");
+        System.out.println("  |    .         .   __|__   .         .           .               |");
+        System.out.println("  |         .      /  |  \\         .       .                       |");
+        System.out.println("  |    .          /===|===\\    .                  *                |");
+        System.out.println("  |              |   HAL   |        .       .                      |");
+        System.out.println("  |    .         |  [O_O]  |   .                    .              |");
+        System.out.println("  |         *    |_________|                  .                    |");
+        System.out.println("  |              /   | |   \\      *    .           .               |");
+        System.out.println("  |    .        /    | |    \\                 .                    |");
+        System.out.println("  |            /_____|_|_____\\  .       *             .            |");
+        System.out.println("  |                                                                |");
+        System.out.println("  |       \"Good morning. I am HAL 9001. I am here to help.\"        |");
+        System.out.println("  +================================================================+");
+        System.out.println(RESET);
     }
 
-    /** Sets starting resources based on difficulty choice. */
-    static void applyDifficulty(int intDifficulty) {
-        if (intDifficulty == 1) {
-            intOxygen = 95; intFood = 95; intWater = 95;
-            intCrops  = 90; intMorale = 85;
+    static void applyDifficulty(int intDifficulty)
+    {
+        if (intDifficulty == 1)
+        {
+            intOxygen = 95;
+            intFood = 95;
+            intWater = 95;
+            intCrops = 90;
+            intMorale = 85;
             halSay("Easy mode confirmed. Resource reserves are well-stocked.");
-        } else if (intDifficulty == 2) {
-            // Normal - defaults already set
+        }
+        else if (intDifficulty == 2)
+        {
             halSay("Normal mode confirmed. Standard mission loadout active.");
-        } else {
-            intOxygen = 60; intFood = 55; intWater = 55;
-            intCrops  = 45; intMorale = 50;
+        }
+        else
+        {
+            intOxygen = 60;
+            intFood = 55;
+            intWater = 55;
+            intCrops = 45;
+            intMorale = 50;
             halSay("Hard mode confirmed. Resources are limited. Choose wisely.");
         }
     }
 
-    /** Prompts for crew names, generates IDs, assigns shifts and default stats. */
-    static void setupCrew() {
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
+    static void setupCrew()
+    {
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
             System.out.print("  Enter name for crewmate " + (intCount + 1) + ": ");
-            arrNames[intCount]      = sc.nextLine().trim();
-            arrIDs[intCount]        = "C" + (100 + rng.nextInt(900));
-            chrShifts[intCount]     = (intCount % 2 == 0) ? 'A' : 'B';
-            intMood[intCount]       = 10;
-            intEnergy[intCount]     = 10;
-            intStress[intCount]     = 0;
-            intHunger[intCount]     = 0;
-            intHealth[intCount]     = 10;
+            arrNames[intCount] = sc.nextLine().trim();
+
+            if (arrNames[intCount].length() == 0)
+            {
+                arrNames[intCount] = "Crewmate " + (intCount + 1);
+            }
+
+            arrIDs[intCount] = "C" + (100 + rng.nextInt(900));
+            chrShifts[intCount] = (intCount % 2 == 0) ? 'A' : 'B';
+
+            intMood[intCount] = 10;
+            intEnergy[intCount] = 10;
+            intStress[intCount] = 0;
+            intHunger[intCount] = 0;
+            intHealth[intCount] = 10;
             intTasksToday[intCount] = 0;
-            System.out.println("  > " + arrNames[intCount]
+
+            System.out.println(GREEN + "  > Registered: " + RESET
+                    + arrNames[intCount]
                     + "  |  ID: " + arrIDs[intCount]
                     + "  |  Shift: " + chrShifts[intCount]);
         }
     }
 
-    // =========================================================================
-    // MAIN MENU DISPLAY
-    // =========================================================================
-    static void printDayHeader() {
+    static void printDashboard()
+    {
         char chrActiveShift = (intMissionDay % 2 != 0) ? 'A' : 'B';
-        System.out.println("\n  +----------------------------------------------------------+");
-        System.out.printf( "  |  HAL 9001   |   Mission Day: %-3d  |  Active Shift: %c    |%n",
-                intMissionDay, chrActiveShift);
-        System.out.println("  +----------------------------------------------------------+");
-        System.out.println("  |  [A] View Crew Status          [I] End Mission Day       |");
-        System.out.println("  |  [B] View Ship Resources       [J] Exit Game             |");
-        System.out.println("  |  [C] Offer Daily Task          [K] Workout Planner       |");
-        System.out.println("  |  [D] Schedule Recreation       [L] Meal Tracker          |");
-        System.out.println("  |  [E] HAL Recommendations       [M] Rest Planner          |");
-        System.out.println("  |  [F] Crew Support Event        [N] Crop Care System      |");
-        System.out.println("  |  [G] Emergency Event           [O] Crew Check-In         |");
-        System.out.println("  |  [H] Crew Journal Entry                                  |");
-        System.out.println("  +----------------------------------------------------------+");
+
+        System.out.println(CYAN + BOLD);
+        System.out.println("  +================================================================+");
+        System.out.printf( "  | %-22s | %-15s | %-17s |%n",
+                "HAL 9001 COMMAND", "DAY " + intMissionDay, "SHIFT " + chrActiveShift);
+        System.out.println("  +================================================================+");
+        System.out.print(RESET);
+
+        System.out.printf("  | O2: %-4s | FOOD: %-4s | WATER: %-4s | CROPS: %-4s | MORALE: %-4s |%n",
+                intOxygen + "%", intFood + "%", intWater + "%", intCrops + "%", intMorale + "%");
+
+        System.out.println(CYAN + "  +================================================================+" + RESET);
     }
 
-    // =========================================================================
-    // A - VIEW CREW STATUS
-    // =========================================================================
-    static void viewCrewStatus() {
-        printBoxHeader("CREW STATUS  --  Day " + intMissionDay);
+    static void printDayHeader()
+    {
+        System.out.println("\n  " + BOLD + "MISSION CONTROL BUTTONS" + RESET);
+        System.out.println("  +---------------------------+---------------------------+");
+        System.out.println("  | " + button("A", "Crew Status       ") + " | " + button("B", "Ship Resources    ") + " |");
+        System.out.println("  | " + button("C", "Daily Task        ") + " | " + button("D", "Recreation        ") + " |");
+        System.out.println("  | " + button("E", "Recommendations   ") + " | " + button("F", "Support Event     ") + " |");
+        System.out.println("  | " + button("G", "Emergency Event   ") + " | " + button("H", "Journal Entry     ") + " |");
+        System.out.println("  | " + button("I", "End Mission Day   ") + " | " + button("J", "Exit Game         ") + " |");
+        System.out.println("  | " + button("K", "Workout Planner   ") + " | " + button("L", "Meal Tracker      ") + " |");
+        System.out.println("  | " + button("M", "Rest Planner      ") + " | " + button("N", "Crop Care System  ") + " |");
+        System.out.println("  | " + button("O", "Crew Check-In     ") + " |                           |");
+        System.out.println("  +---------------------------+---------------------------+");
+    }
+
+    static void viewCrewStatus()
+    {
+        printBoxHeader("CREW STATUS -- DAY " + intMissionDay, CYAN);
         halSay("I have reviewed the current crew conditions.");
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
+
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
             System.out.println();
-            System.out.println("  " + arrNames[intCount]
+            System.out.println(PURPLE + "  +----------------------------------------------------------+" + RESET);
+            System.out.println("  | " + BOLD + arrNames[intCount] + RESET
                     + "  [" + arrIDs[intCount] + "]"
                     + "  Shift: " + chrShifts[intCount]
-                    + "  Tasks today: " + intTasksToday[intCount] + "/2");
-            printBar("  Mood  ", intMood[intCount],   10, false);
-            printBar("  Energy", intEnergy[intCount], 10, false);
-            printBar("  Stress", intStress[intCount], 10, true);  // high = bad
-            printBar("  Hunger", intHunger[intCount], 10, true);  // high = bad
-            printBar("  Health", intHealth[intCount], 10, false);
+                    + "  Tasks: " + intTasksToday[intCount] + "/2");
+            System.out.println(PURPLE + "  +----------------------------------------------------------+" + RESET);
+            printBar("Mood  ", intMood[intCount], 10, false);
+            printBar("Energy", intEnergy[intCount], 10, false);
+            printBar("Stress", intStress[intCount], 10, true);
+            printBar("Hunger", intHunger[intCount], 10, true);
+            printBar("Health", intHealth[intCount], 10, false);
         }
     }
 
-    // =========================================================================
-    // B - VIEW SHIP RESOURCES
-    // =========================================================================
-    static void viewShipResources() {
-        printBoxHeader("SHIP RESOURCES  --  Day " + intMissionDay);
-        printBar("  Oxygen", intOxygen, 100, false);
-        printBar("  Food  ", intFood,   100, false);
-        printBar("  Water ", intWater,  100, false);
-        printBar("  Crops ", intCrops,  100, false);
-        printBar("  Morale", intMorale, 100, false);
+    static void viewShipResources()
+    {
+        printBoxHeader("SHIP RESOURCES -- DAY " + intMissionDay, CYAN);
+        printBar("Oxygen", intOxygen, 100, false);
+        printBar("Food  ", intFood, 100, false);
+        printBar("Water ", intWater, 100, false);
+        printBar("Crops ", intCrops, 100, false);
+        printBar("Morale", intMorale, 100, false);
     }
 
-    // =========================================================================
-    // C - OFFER DAILY TASK
-    // =========================================================================
-    static void offerDailyTask() {
-        printBoxHeader("OFFER DAILY TASK");
+    static void offerDailyTask()
+    {
+        printBoxHeader("OFFER DAILY TASK", CYAN);
+
         char chrActiveShift = (intMissionDay % 2 != 0) ? 'A' : 'B';
         halSay("Only Shift " + chrActiveShift + " crewmates may be assigned tasks today.");
 
         int intIndex = pickCrewmate();
 
-        // Check shift
-        if (chrShifts[intIndex] != chrActiveShift) {
+        if (chrShifts[intIndex] != chrActiveShift)
+        {
             halSay(arrNames[intIndex] + " is on the resting shift. No tasks should be assigned.");
             return;
         }
 
-        // Check task limit
-        if (intTasksToday[intIndex] >= 2) {
+        if (intTasksToday[intIndex] >= 2)
+        {
             halSay(arrNames[intIndex] + " has completed 2 tasks today. Rest is recommended.");
             return;
         }
 
-        System.out.println("\n  Assign a task to " + arrNames[intIndex] + ":");
-        System.out.println("    1. Clean living quarters      (Energy -1, Stress +1, Morale +3)");
-        System.out.println("    2. Monitor crops              (Energy -1, Stress +1, Crops +5, Food +3)");
-        System.out.println("    3. Repair oxygen system       (Energy -2, Stress +2, Oxygen +8)");
-        System.out.println("    4. Prepare meals              (Energy -1, Hunger -3, Food -3, Morale +5)");
-        System.out.println("    5. Low-gravity workout        (Energy -2, Health +2, Stress -1)");
-        int intTask = getIntInRange(sc, "  Choose task (1-5): ", 1, 5);
+        System.out.println("\n  Assign a task to " + BOLD + arrNames[intIndex] + RESET + ":");
+        System.out.println("  " + button("1", "Clean living quarters      Energy -1, Stress +1, Morale +3"));
+        System.out.println("  " + button("2", "Monitor crops              Energy -1, Stress +1, Crops +5, Food +3"));
+        System.out.println("  " + button("3", "Repair oxygen system       Energy -2, Stress +2, Oxygen +8"));
+        System.out.println("  " + button("4", "Prepare meals              Energy -1, Hunger -3, Food -3, Morale +5"));
+        System.out.println("  " + button("5", "Low-gravity workout        Energy -2, Health +2, Stress -1"));
 
-        switch (intTask) {
+        int intTask = getIntInRange(sc, "\n  Choose task (1-5): ", 1, 5);
+
+        switch (intTask)
+        {
             case 1:
                 System.out.println("  > " + arrNames[intIndex] + " cleans the living quarters.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 1);
                 intStress[intIndex] = limitStat(intStress[intIndex] + 1);
-                intMorale           = limitResource(intMorale + 3);
+                intMorale = limitResource(intMorale + 3);
                 break;
             case 2:
                 System.out.println("  > " + arrNames[intIndex] + " monitors the hydroponic crops.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 1);
                 intStress[intIndex] = limitStat(intStress[intIndex] + 1);
-                intCrops            = limitResource(intCrops + 5);
-                intFood             = limitResource(intFood  + 3);
+                intCrops = limitResource(intCrops + 5);
+                intFood = limitResource(intFood + 3);
                 break;
             case 3:
                 System.out.println("  > " + arrNames[intIndex] + " repairs the oxygen system.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 2);
                 intStress[intIndex] = limitStat(intStress[intIndex] + 2);
-                intOxygen           = limitResource(intOxygen + 8);
+                intOxygen = limitResource(intOxygen + 8);
                 break;
             case 4:
                 System.out.println("  > " + arrNames[intIndex] + " prepares meals for the crew.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 1);
                 intHunger[intIndex] = limitStat(intHunger[intIndex] - 3);
-                intFood             = limitResource(intFood - 3);
-                intMorale           = limitResource(intMorale + 5);
+                intFood = limitResource(intFood - 3);
+                intMorale = limitResource(intMorale + 5);
                 break;
             case 5:
                 System.out.println("  > " + arrNames[intIndex] + " completes a low-gravity workout.");
@@ -333,95 +387,132 @@ public class Hal9001Game {
                 + " has completed " + intTasksToday[intIndex] + "/2 tasks today.");
     }
 
-    // =========================================================================
-    // D - SCHEDULE RECREATION
-    // =========================================================================
-    static void scheduleRecreation() {
-        printBoxHeader("SCHEDULE RECREATION");
+    static void scheduleRecreation()
+    {
+        printBoxHeader("SCHEDULE RECREATION", CYAN);
         halSay("Recreation is essential for crew wellbeing during long missions.");
-        System.out.println("  1. Movie night");
-        System.out.println("  2. Group game");
-        System.out.println("  3. Quiet reading time");
-        System.out.println("  4. Space-viewing break");
-        int intChoice = getIntInRange(sc, "  Choose activity (1-4): ", 1, 4);
-        String[] arrActivities = {
-            "Movie night", "Group game", "Quiet reading time", "Space-viewing break"
-        };
+
+        System.out.println("  " + button("1", "Movie night"));
+        System.out.println("  " + button("2", "Group game"));
+        System.out.println("  " + button("3", "Quiet reading time"));
+        System.out.println("  " + button("4", "Space-viewing break"));
+
+        int intChoice = getIntInRange(sc, "\n  Choose activity (1-4): ", 1, 4);
+        String[] arrActivities = {"Movie night", "Group game", "Quiet reading time", "Space-viewing break"};
+
         System.out.println("\n  > " + arrActivities[intChoice - 1] + " scheduled for the crew.");
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
-            intMood[intCount]   = limitStat(intMood[intCount]   + 2);
+
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
+            intMood[intCount] = limitStat(intMood[intCount] + 2);
             intStress[intCount] = limitStat(intStress[intCount] - 2);
             intEnergy[intCount] = limitStat(intEnergy[intCount] + 1);
         }
+
         intMorale = limitResource(intMorale + 8);
-        System.out.println("  All crew: Mood +2, Stress -2, Energy +1. Ship Morale +8.");
+        System.out.println(GREEN + "  All crew: Mood +2, Stress -2, Energy +1. Ship Morale +8." + RESET);
     }
 
-    // =========================================================================
-    // E - HAL RECOMMENDATIONS
-    // =========================================================================
-    static void halRecommendations() {
-        printBoxHeader("HAL RECOMMENDATIONS");
+    static void halRecommendations()
+    {
+        printBoxHeader("HAL RECOMMENDATIONS", CYAN);
         halSay("I have reviewed the current crew conditions. Support intervention may be required.");
 
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
-            System.out.println("\n  " + arrNames[intCount] + " [" + arrIDs[intCount] + "]:");
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
+            System.out.println("\n  " + BOLD + arrNames[intCount] + RESET + " [" + arrIDs[intCount] + "]:");
             boolean bolIssue = false;
-            if (intStress[intCount] >= 8) {
-                System.out.println("    ! High stress. Reduce workload and schedule recreation.");
+
+            if (intStress[intCount] >= 8)
+            {
+                System.out.println(YELLOW + "    ! High stress. Reduce workload and schedule recreation." + RESET);
                 bolIssue = true;
             }
-            if (intEnergy[intCount] <= 3) {
-                System.out.println("    ! Low energy. Assign rest or lighter tasks.");
+            if (intEnergy[intCount] <= 3)
+            {
+                System.out.println(YELLOW + "    ! Low energy. Assign rest or lighter tasks." + RESET);
                 bolIssue = true;
             }
-            if (intMood[intCount] <= 4) {
-                System.out.println("    ! Low mood. Increase social support or recreation.");
+            if (intMood[intCount] <= 4)
+            {
+                System.out.println(YELLOW + "    ! Low mood. Increase social support or recreation." + RESET);
                 bolIssue = true;
             }
-            if (intHunger[intCount] >= 7) {
-                System.out.println("    ! High hunger. Use Meal Tracker [L] soon.");
+            if (intHunger[intCount] >= 7)
+            {
+                System.out.println(YELLOW + "    ! High hunger. Use Meal Tracker [L] soon." + RESET);
                 bolIssue = true;
             }
-            if (intHealth[intCount] <= 4) {
-                System.out.println("    ! Poor health. Reduce duties and allow recovery.");
+            if (intHealth[intCount] <= 4)
+            {
+                System.out.println(YELLOW + "    ! Poor health. Reduce duties and allow recovery." + RESET);
                 bolIssue = true;
             }
-            if (!bolIssue) System.out.println("    Condition stable. No intervention required.");
+            if (!bolIssue)
+            {
+                System.out.println(GREEN + "    Condition stable. No intervention required." + RESET);
+            }
         }
 
-        System.out.println("\n  --- Ship-Wide Systems ---");
+        System.out.println("\n  " + BOLD + "--- Ship-Wide Systems ---" + RESET);
         boolean bolShipIssue = false;
-        if (intOxygen < 40) { System.out.println("  ! Oxygen critically low. Repair immediately.");  bolShipIssue = true; }
-        if (intFood   < 40) { System.out.println("  ! Food supply critical. Prioritize crop care."); bolShipIssue = true; }
-        if (intWater  < 40) { System.out.println("  ! Water reserves low. Conserve and restock.");   bolShipIssue = true; }
-        if (intCrops  < 40) { System.out.println("  ! Crop health declining. Assign monitoring.");   bolShipIssue = true; }
-        if (intMorale < 40) { System.out.println("  ! Crew morale is low. Schedule recreation.");    bolShipIssue = true; }
-        if (!bolShipIssue)    System.out.println("  All ship systems stable. Nominal operation confirmed.");
+
+        if (intOxygen < 40)
+        {
+            System.out.println(RED + "  ! Oxygen critically low. Repair immediately." + RESET);
+            bolShipIssue = true;
+        }
+        if (intFood < 40)
+        {
+            System.out.println(RED + "  ! Food supply critical. Prioritize crop care." + RESET);
+            bolShipIssue = true;
+        }
+        if (intWater < 40)
+        {
+            System.out.println(RED + "  ! Water reserves low. Conserve and restock." + RESET);
+            bolShipIssue = true;
+        }
+        if (intCrops < 40)
+        {
+            System.out.println(RED + "  ! Crop health declining. Assign monitoring." + RESET);
+            bolShipIssue = true;
+        }
+        if (intMorale < 40)
+        {
+            System.out.println(RED + "  ! Crew morale is low. Schedule recreation." + RESET);
+            bolShipIssue = true;
+        }
+        if (!bolShipIssue)
+        {
+            System.out.println(GREEN + "  All ship systems stable. Nominal operation confirmed." + RESET);
+        }
     }
 
-    // =========================================================================
-    // F - CREW SUPPORT EVENT
-    // =========================================================================
-    static void crewSupportEvent() {
-        printBoxHeader("CREW SUPPORT EVENT");
+    static void crewSupportEvent()
+    {
+        printBoxHeader("CREW SUPPORT EVENT", CYAN);
         int intIndex = rng.nextInt(intCrewCount);
+
         halSay("Support intervention may be required for " + arrNames[intIndex] + ".");
         System.out.println("\n  " + arrNames[intIndex] + " sends HAL a private status report.");
         System.out.println("  \"" + arrNames[intIndex] + " feels overwhelmed by the mission routine.\"");
+
         System.out.println("\n  How should HAL respond?");
-        System.out.println("    1. Suggest rest and reduce task load");
-        System.out.println("    2. Encourage them to continue working");
-        System.out.println("    3. Schedule group recreation");
-        System.out.println("    4. Ignore the report");
-        int intChoice = getIntInRange(sc, "  Enter choice (1-4): ", 1, 4);
-        switch (intChoice) {
+        System.out.println("  " + button("1", "Suggest rest and reduce task load"));
+        System.out.println("  " + button("2", "Encourage them to continue working"));
+        System.out.println("  " + button("3", "Schedule group recreation"));
+        System.out.println("  " + button("4", "Ignore the report"));
+
+        int intChoice = getIntInRange(sc, "\n  Enter choice (1-4): ", 1, 4);
+
+        switch (intChoice)
+        {
             case 1:
                 halSay("Rest recommended for " + arrNames[intIndex] + ". Adjusting schedule.");
                 intStress[intIndex] = limitStat(intStress[intIndex] - 3);
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 2);
-                intMood[intIndex]   = limitStat(intMood[intIndex]   + 1);
-                intMorale           = limitResource(intMorale + 3);
+                intMood[intIndex] = limitStat(intMood[intIndex] + 1);
+                intMorale = limitResource(intMorale + 3);
                 break;
             case 2:
                 halSay("Encouraging continued work. Note: pushing through fatigue has risks.");
@@ -430,206 +521,226 @@ public class Hal9001Game {
                 break;
             case 3:
                 halSay("Group recreation scheduled for the crew.");
-                for (int intCount = 0; intCount < intCrewCount; intCount++) {
-                    intMood[intCount]   = limitStat(intMood[intCount]   + 1);
+                for (int intCount = 0; intCount < intCrewCount; intCount++)
+                {
+                    intMood[intCount] = limitStat(intMood[intCount] + 1);
                     intStress[intCount] = limitStat(intStress[intCount] - 1);
                 }
                 intMorale = limitResource(intMorale + 5);
                 break;
             case 4:
                 halSay("Report ignored. " + arrNames[intIndex] + " has noticed.");
-                intMood[intIndex]   = limitStat(intMood[intIndex]   - 2);
+                intMood[intIndex] = limitStat(intMood[intIndex] - 2);
                 intStress[intIndex] = limitStat(intStress[intIndex] + 2);
-                intMorale           = limitResource(intMorale - 4);
+                intMorale = limitResource(intMorale - 4);
                 break;
         }
     }
 
-    // =========================================================================
-    // G - EMERGENCY EVENT
-    // =========================================================================
-    static void emergencyEvent() {
-        printBoxHeader("!!! EMERGENCY ALERT !!!");
+    static void emergencyEvent()
+    {
+        printBoxHeader("!!! EMERGENCY ALERT !!!", RED);
         int intEvent = rng.nextInt(3) + 1;
-        switch (intEvent) {
+
+        switch (intEvent)
+        {
             case 1:
-                System.out.println("  OXYGEN LEAK detected in Section C.");
-                System.out.println("    1. Wake resting shift   (Oxygen +10, all Stress +1, all Energy -1)");
-                System.out.println("    2. Use backup reserves  (Oxygen +6, Morale -3)");
-                System.out.println("    3. Wait and monitor     (Oxygen -12)");
-                int intOxyChoice = getIntInRange(sc, "  Enter choice (1-3): ", 1, 3);
-                if (intOxyChoice == 1) {
+                System.out.println(RED + "  OXYGEN LEAK detected in Section C." + RESET);
+                System.out.println("  " + button("1", "Wake resting shift   Oxygen +10, all Stress +1, all Energy -1"));
+                System.out.println("  " + button("2", "Use backup reserves  Oxygen +6, Morale -3"));
+                System.out.println("  " + button("3", "Wait and monitor     Oxygen -12"));
+                int intOxyChoice = getIntInRange(sc, "\n  Enter choice (1-3): ", 1, 3);
+
+                if (intOxyChoice == 1)
+                {
                     intOxygen = limitResource(intOxygen + 10);
-                    for (int i = 0; i < intCrewCount; i++) {
+                    for (int i = 0; i < intCrewCount; i++)
+                    {
                         intStress[i] = limitStat(intStress[i] + 1);
                         intEnergy[i] = limitStat(intEnergy[i] - 1);
                     }
-                    System.out.println("  > Leak contained. Oxygen +10.");
-                } else if (intOxyChoice == 2) {
+                    System.out.println(GREEN + "  > Leak contained. Oxygen +10." + RESET);
+                }
+                else if (intOxyChoice == 2)
+                {
                     intOxygen = limitResource(intOxygen + 6);
                     intMorale = limitResource(intMorale - 3);
-                    System.out.println("  > Backup used. Oxygen +6, Morale -3.");
-                } else {
+                    System.out.println(YELLOW + "  > Backup used. Oxygen +6, Morale -3." + RESET);
+                }
+                else
+                {
                     intOxygen = limitResource(intOxygen - 12);
-                    System.out.println("  > Leak worsens. Oxygen -12.");
+                    System.out.println(RED + "  > Leak worsens. Oxygen -12." + RESET);
                 }
                 break;
+
             case 2:
-                System.out.println("  HYDROPONIC CROPS are wilting.");
-                System.out.println("    1. Immediate crop care  (Crops +10, Water -4)");
-                System.out.println("    2. Use stored food      (Food -8, Morale +2)");
-                System.out.println("    3. Ignore               (Crops -12, Food -4)");
-                int intCropChoice = getIntInRange(sc, "  Enter choice (1-3): ", 1, 3);
-                if (intCropChoice == 1) {
+                System.out.println(YELLOW + "  HYDROPONIC CROPS are wilting." + RESET);
+                System.out.println("  " + button("1", "Immediate crop care  Crops +10, Water -4"));
+                System.out.println("  " + button("2", "Use stored food      Food -8, Morale +2"));
+                System.out.println("  " + button("3", "Ignore               Crops -12, Food -4"));
+                int intCropChoice = getIntInRange(sc, "\n  Enter choice (1-3): ", 1, 3);
+
+                if (intCropChoice == 1)
+                {
                     intCrops = limitResource(intCrops + 10);
                     intWater = limitResource(intWater - 4);
-                    System.out.println("  > Crops tended. Crops +10, Water -4.");
-                } else if (intCropChoice == 2) {
-                    intFood   = limitResource(intFood - 8);
+                    System.out.println(GREEN + "  > Crops tended. Crops +10, Water -4." + RESET);
+                }
+                else if (intCropChoice == 2)
+                {
+                    intFood = limitResource(intFood - 8);
                     intMorale = limitResource(intMorale + 2);
-                    System.out.println("  > Stored food deployed. Food -8, Morale +2.");
-                } else {
+                    System.out.println(YELLOW + "  > Stored food deployed. Food -8, Morale +2." + RESET);
+                }
+                else
+                {
                     intCrops = limitResource(intCrops - 12);
-                    intFood  = limitResource(intFood  - 4);
-                    System.out.println("  > Crops fail. Crops -12, Food -4.");
+                    intFood = limitResource(intFood - 4);
+                    System.out.println(RED + "  > Crops fail. Crops -12, Food -4." + RESET);
                 }
                 break;
+
             case 3:
-                System.out.println("  CREW MORALE is dangerously low.");
-                System.out.println("    1. Ship-wide recreation  (Morale +12, all Mood +2, all Stress -2)");
-                System.out.println("    2. HAL supportive msg    (Morale +5)");
-                System.out.println("    3. Continue routine      (Morale -8)");
-                int intMoralChoice = getIntInRange(sc, "  Enter choice (1-3): ", 1, 3);
-                if (intMoralChoice == 1) {
+                System.out.println(YELLOW + "  CREW MORALE is dangerously low." + RESET);
+                System.out.println("  " + button("1", "Ship-wide recreation  Morale +12, all Mood +2, all Stress -2"));
+                System.out.println("  " + button("2", "HAL supportive msg    Morale +5"));
+                System.out.println("  " + button("3", "Continue routine      Morale -8"));
+                int intMoralChoice = getIntInRange(sc, "\n  Enter choice (1-3): ", 1, 3);
+
+                if (intMoralChoice == 1)
+                {
                     intMorale = limitResource(intMorale + 12);
-                    for (int i = 0; i < intCrewCount; i++) {
-                        intMood[i]   = limitStat(intMood[i]   + 2);
+                    for (int i = 0; i < intCrewCount; i++)
+                    {
+                        intMood[i] = limitStat(intMood[i] + 2);
                         intStress[i] = limitStat(intStress[i] - 2);
                     }
-                    System.out.println("  > Morale +12. Crew spirits lifting.");
-                } else if (intMoralChoice == 2) {
+                    System.out.println(GREEN + "  > Morale +12. Crew spirits lifting." + RESET);
+                }
+                else if (intMoralChoice == 2)
+                {
                     intMorale = limitResource(intMorale + 5);
                     halSay("\"You are all doing an exceptional job. This mission matters. I am here.\"");
-                } else {
+                }
+                else
+                {
                     intMorale = limitResource(intMorale - 8);
-                    System.out.println("  > Tension unaddressed. Morale -8.");
+                    System.out.println(RED + "  > Tension unaddressed. Morale -8." + RESET);
                 }
                 break;
         }
     }
 
-    // =========================================================================
-    // H - CREW JOURNAL ENTRY
-    // =========================================================================
-    static void crewJournalEntry() {
-        printBoxHeader("CREW JOURNAL");
+    static void crewJournalEntry()
+    {
+        printBoxHeader("CREW JOURNAL", CYAN);
         int intIndex = rng.nextInt(intCrewCount);
         int intQuote = rng.nextInt(arrJournalQuotes.length);
-        System.out.println("\n  " + arrNames[intIndex] + " [" + arrIDs[intIndex] + "] writes:");
+
+        System.out.println("\n  " + PURPLE + arrNames[intIndex] + RESET + " [" + arrIDs[intIndex] + "] writes:");
         System.out.println("  \"" + arrJournalQuotes[intQuote] + "\"");
         halSay("Entry logged. Monitoring crew wellbeing.");
     }
 
-    // =========================================================================
-    // I - END MISSION DAY
-    // =========================================================================
-    static void endMissionDay() {
-        printBoxHeader("END OF DAY " + intMissionDay + " -- SUMMARY");
+    static void endMissionDay()
+    {
+        printBoxHeader("END OF DAY " + intMissionDay + " -- SUMMARY", CYAN);
         viewShipResources();
         viewCrewStatus();
 
         halSay("Applying end-of-day changes. Please stand by.");
 
-        // Ship resource decay
         intOxygen = limitResource(intOxygen - 4);
-        intFood   = limitResource(intFood   - 4);
-        intWater  = limitResource(intWater  - 4);
+        intFood = limitResource(intFood - 4);
+        intWater = limitResource(intWater - 4);
         intMorale = limitResource(intMorale - 2);
 
-        // Per-crewmate decay and stat penalties
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
             intEnergy[intCount] = limitStat(intEnergy[intCount] - 1);
             intStress[intCount] = limitStat(intStress[intCount] + 1);
             intHunger[intCount] = limitStat(intHunger[intCount] + 1);
 
-            if (intStress[intCount] >= 9) {
+            if (intStress[intCount] >= 9)
+            {
                 intHealth[intCount] = limitStat(intHealth[intCount] - 1);
-                intMood[intCount]   = limitStat(intMood[intCount]   - 1);
-                System.out.println("  " + arrNames[intCount] + ": extreme stress penalty applied.");
+                intMood[intCount] = limitStat(intMood[intCount] - 1);
+                System.out.println(YELLOW + "  " + arrNames[intCount] + ": extreme stress penalty applied." + RESET);
             }
-            if (intEnergy[intCount] <= 2) {
+            if (intEnergy[intCount] <= 2)
+            {
                 intHealth[intCount] = limitStat(intHealth[intCount] - 1);
-                intMood[intCount]   = limitStat(intMood[intCount]   - 1);
-                System.out.println("  " + arrNames[intCount] + ": exhaustion penalty applied.");
+                intMood[intCount] = limitStat(intMood[intCount] - 1);
+                System.out.println(YELLOW + "  " + arrNames[intCount] + ": exhaustion penalty applied." + RESET);
             }
-            if (intHunger[intCount] >= 8) {
+            if (intHunger[intCount] >= 8)
+            {
                 intHealth[intCount] = limitStat(intHealth[intCount] - 1);
-                intMood[intCount]   = limitStat(intMood[intCount]   - 1);
-                System.out.println("  " + arrNames[intCount] + ": hunger penalty applied.");
+                intMood[intCount] = limitStat(intMood[intCount] - 1);
+                System.out.println(YELLOW + "  " + arrNames[intCount] + ": hunger penalty applied." + RESET);
             }
 
-            intTasksToday[intCount] = 0; // reset daily tasks
+            intTasksToday[intCount] = 0;
         }
 
         intMissionDay++;
 
-        // Tomorrow's recommendation
         System.out.println();
         halSay("Recommendation for tomorrow:");
-        if (intMorale < 50)
-            System.out.println("  > Schedule recreation early. Crew morale needs attention.");
-        else if (intFood < 50)
-            System.out.println("  > Prioritize crop care and meal planning. Food is low.");
-        else if (intOxygen < 50)
-            System.out.println("  > Repair oxygen systems soon. Supply is below optimal.");
-        else
-            System.out.println("  > Maintain a balanced workload. The crew is performing well.");
 
-        // Day transition screen
-        System.out.println();
-        System.out.println("  +--------------------------------------------------+");
-        System.out.println("  |   Systems dimming...                             |");
-        System.out.println("  |   Crew entering rest cycle...                    |");
-        System.out.printf( "  |   Mission Day %-3d initialized.                  |%n", intMissionDay);
-        System.out.println("  +--------------------------------------------------+");
+        if (intMorale < 50)
+        {
+            System.out.println("  > Schedule recreation early. Crew morale needs attention.");
+        }
+        else if (intFood < 50)
+        {
+            System.out.println("  > Prioritize crop care and meal planning. Food is low.");
+        }
+        else if (intOxygen < 50)
+        {
+            System.out.println("  > Repair oxygen systems soon. Supply is below optimal.");
+        }
+        else
+        {
+            System.out.println("  > Maintain a balanced workload. The crew is performing well.");
+        }
+
+        printTransitionScreen();
     }
 
-    // =========================================================================
-    // K - WORKOUT PLANNER  (NEW)
-    // =========================================================================
-    static void workoutPlanner() {
-        printBoxHeader("WORKOUT PLANNER");
+    static void workoutPlanner()
+    {
+        printBoxHeader("WORKOUT PLANNER", CYAN);
         halSay("Regular exercise in low gravity is critical for crew health and bone density.");
         int intIndex = pickCrewmate();
 
         System.out.println("\n  Select a workout for " + arrNames[intIndex] + ":");
-        System.out.println("    1. Resistance band workout  (Energy -2, Health +2, Stress -1)");
-        System.out.println("    2. Low-gravity cardio       (Energy -2, Health +1, Mood +1)");
-        System.out.println("    3. Mobility / stretching    (Energy -1, Health +1, Stress -2)");
-        System.out.println("    4. Recovery / rest workout  (Energy +2, Stress -2, Health +1)");
-        int intChoice = getIntInRange(sc, "  Choose workout (1-4): ", 1, 4);
+        System.out.println("  " + button("1", "Resistance band workout  Energy -2, Health +2, Stress -1"));
+        System.out.println("  " + button("2", "Low-gravity cardio       Energy -2, Health +1, Mood +1"));
+        System.out.println("  " + button("3", "Mobility / stretching    Energy -1, Health +1, Stress -2"));
+        System.out.println("  " + button("4", "Recovery / rest workout  Energy +2, Stress -2, Health +1"));
 
-        switch (intChoice) {
+        int intChoice = getIntInRange(sc, "\n  Choose workout (1-4): ", 1, 4);
+
+        switch (intChoice)
+        {
             case 1:
-                System.out.println("  > " + arrNames[intIndex] + " completes a resistance band workout.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 2);
                 intHealth[intIndex] = limitStat(intHealth[intIndex] + 2);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 1);
                 break;
             case 2:
-                System.out.println("  > " + arrNames[intIndex] + " runs a low-gravity cardio session.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 2);
                 intHealth[intIndex] = limitStat(intHealth[intIndex] + 1);
-                intMood[intIndex]   = limitStat(intMood[intIndex]   + 1);
+                intMood[intIndex] = limitStat(intMood[intIndex] + 1);
                 break;
             case 3:
-                System.out.println("  > " + arrNames[intIndex] + " completes a mobility and stretching routine.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 1);
                 intHealth[intIndex] = limitStat(intHealth[intIndex] + 1);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 2);
                 break;
             case 4:
-                System.out.println("  > " + arrNames[intIndex] + " does a gentle recovery workout.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 2);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 2);
                 intHealth[intIndex] = limitStat(intHealth[intIndex] + 1);
@@ -639,81 +750,74 @@ public class Hal9001Game {
         halSay("Workout complete. " + arrNames[intIndex] + "'s fitness log has been updated.");
     }
 
-    // =========================================================================
-    // L - MEAL TRACKER  (NEW)
-    // =========================================================================
-    static void mealTracker() {
-        printBoxHeader("MEAL TRACKER");
+    static void mealTracker()
+    {
+        printBoxHeader("MEAL TRACKER", CYAN);
         halSay("Proper nutrition is essential for sustained crew performance.");
         int intIndex = pickCrewmate();
 
         System.out.println("\n  Select a meal for " + arrNames[intIndex] + ":");
-        System.out.println("    1. High-protein meal       (Hunger -4, Energy +2, Food -4)");
-        System.out.println("    2. Hydration-focused meal  (Hunger -2, Water -3, Energy +1)");
-        System.out.println("    3. Comfort meal            (Hunger -3, Mood +2, Morale +3, Food -5)");
-        System.out.println("    4. Ration meal             (Hunger -2, Food -1, Mood -1)");
-        int intChoice = getIntInRange(sc, "  Choose meal (1-4): ", 1, 4);
+        System.out.println("  " + button("1", "High-protein meal       Hunger -4, Energy +2, Food -4"));
+        System.out.println("  " + button("2", "Hydration-focused meal  Hunger -2, Water -3, Energy +1"));
+        System.out.println("  " + button("3", "Comfort meal            Hunger -3, Mood +2, Morale +3, Food -5"));
+        System.out.println("  " + button("4", "Ration meal             Hunger -2, Food -1, Mood -1"));
 
-        switch (intChoice) {
+        int intChoice = getIntInRange(sc, "\n  Choose meal (1-4): ", 1, 4);
+
+        switch (intChoice)
+        {
             case 1:
-                System.out.println("  > " + arrNames[intIndex] + " eats a high-protein meal.");
                 intHunger[intIndex] = limitStat(intHunger[intIndex] - 4);
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 2);
-                intFood             = limitResource(intFood - 4);
+                intFood = limitResource(intFood - 4);
                 break;
             case 2:
-                System.out.println("  > " + arrNames[intIndex] + " has a hydration-focused meal.");
                 intHunger[intIndex] = limitStat(intHunger[intIndex] - 2);
-                intWater            = limitResource(intWater - 3);
+                intWater = limitResource(intWater - 3);
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 1);
                 break;
             case 3:
-                System.out.println("  > " + arrNames[intIndex] + " enjoys a comfort meal.");
                 intHunger[intIndex] = limitStat(intHunger[intIndex] - 3);
-                intMood[intIndex]   = limitStat(intMood[intIndex]   + 2);
-                intMorale           = limitResource(intMorale + 3);
-                intFood             = limitResource(intFood - 5);
+                intMood[intIndex] = limitStat(intMood[intIndex] + 2);
+                intMorale = limitResource(intMorale + 3);
+                intFood = limitResource(intFood - 5);
                 break;
             case 4:
-                System.out.println("  > " + arrNames[intIndex] + " eats a standard ration meal.");
                 intHunger[intIndex] = limitStat(intHunger[intIndex] - 2);
-                intFood             = limitResource(intFood - 1);
-                intMood[intIndex]   = limitStat(intMood[intIndex] - 1);
+                intFood = limitResource(intFood - 1);
+                intMood[intIndex] = limitStat(intMood[intIndex] - 1);
                 break;
         }
 
         halSay("Meal logged. " + arrNames[intIndex] + "'s nutrition record has been updated.");
     }
 
-    // =========================================================================
-    // M - REST PLANNER  (NEW)
-    // =========================================================================
-    static void restPlanner() {
-        printBoxHeader("REST PLANNER");
+    static void restPlanner()
+    {
+        printBoxHeader("REST PLANNER", CYAN);
         halSay("Adequate rest is the foundation of crew health and decision-making.");
         int intIndex = pickCrewmate();
 
         System.out.println("\n  Select a rest option for " + arrNames[intIndex] + ":");
-        System.out.println("    1. Short nap           (Energy +2, Stress -1)");
-        System.out.println("    2. Full sleep cycle    (Energy +4, Hunger +1, Stress -2)");
-        System.out.println("    3. Meditation          (Mood +1, Stress -3)");
-        int intChoice = getIntInRange(sc, "  Choose option (1-3): ", 1, 3);
+        System.out.println("  " + button("1", "Short nap           Energy +2, Stress -1"));
+        System.out.println("  " + button("2", "Full sleep cycle    Energy +4, Hunger +1, Stress -2"));
+        System.out.println("  " + button("3", "Meditation          Mood +1, Stress -3"));
 
-        switch (intChoice) {
+        int intChoice = getIntInRange(sc, "\n  Choose option (1-3): ", 1, 3);
+
+        switch (intChoice)
+        {
             case 1:
-                System.out.println("  > " + arrNames[intIndex] + " takes a short nap.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 2);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 1);
                 break;
             case 2:
-                System.out.println("  > " + arrNames[intIndex] + " completes a full sleep cycle.");
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] + 4);
                 intHunger[intIndex] = limitStat(intHunger[intIndex] + 1);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 2);
                 break;
             case 3:
-                System.out.println("  > " + arrNames[intIndex] + " meditates quietly.");
-                intMood[intIndex]   = limitStat(intMood[intIndex]   + 1);
+                intMood[intIndex] = limitStat(intMood[intIndex] + 1);
                 intStress[intIndex] = limitStat(intStress[intIndex] - 3);
                 break;
         }
@@ -721,42 +825,42 @@ public class Hal9001Game {
         halSay("Rest session logged. " + arrNames[intIndex] + " is recovering.");
     }
 
-    // =========================================================================
-    // N - CROP CARE SYSTEM  (NEW)
-    // =========================================================================
-    static void cropCareSystem() {
-        printBoxHeader("CROP CARE SYSTEM");
+    static void cropCareSystem()
+    {
+        printBoxHeader("CROP CARE SYSTEM", CYAN);
         halSay("Healthy crops are a long-term investment in crew survival.");
 
         System.out.println("\n  Select a crop care action:");
-        System.out.println("    1. Water crops          (Crops +8, Water -5)");
-        System.out.println("    2. Adjust grow lights   (Crops +5, chosen crewmate Energy -1)");
-        System.out.println("    3. Harvest crops        (Food +10, Crops -8)");
-        int intChoice = getIntInRange(sc, "  Choose action (1-3): ", 1, 3);
+        System.out.println("  " + button("1", "Water crops          Crops +8, Water -5"));
+        System.out.println("  " + button("2", "Adjust grow lights   Crops +5, chosen crewmate Energy -1"));
+        System.out.println("  " + button("3", "Harvest crops        Food +10, Crops -8"));
 
-        switch (intChoice) {
+        int intChoice = getIntInRange(sc, "\n  Choose action (1-3): ", 1, 3);
+
+        switch (intChoice)
+        {
             case 1:
-                System.out.println("  > Crops watered.");
                 intCrops = limitResource(intCrops + 8);
                 intWater = limitResource(intWater - 5);
-                System.out.println("  Crops +8, Water -5.");
+                System.out.println("  > Crops watered. Crops +8, Water -5.");
                 break;
             case 2:
                 System.out.println("  > Adjusting grow lights. Assign a crewmate:");
                 int intIndex = pickCrewmate();
-                intCrops            = limitResource(intCrops + 5);
+                intCrops = limitResource(intCrops + 5);
                 intEnergy[intIndex] = limitStat(intEnergy[intIndex] - 1);
-                System.out.println("  Crops +5. " + arrNames[intIndex] + " Energy -1.");
+                System.out.println("  > Crops +5. " + arrNames[intIndex] + " Energy -1.");
                 break;
             case 3:
-                // Safety check - harvesting too early damages crop stock permanently
-                if (intCrops < 20) {
+                if (intCrops < 20)
+                {
                     halSay("Crop level is too low to harvest safely. Allow more time to recover.");
-                } else {
-                    System.out.println("  > Harvest complete.");
-                    intFood  = limitResource(intFood  + 10);
-                    intCrops = limitResource(intCrops -  8);
-                    System.out.println("  Food +10, Crops -8.");
+                }
+                else
+                {
+                    intFood = limitResource(intFood + 10);
+                    intCrops = limitResource(intCrops - 8);
+                    System.out.println("  > Harvest complete. Food +10, Crops -8.");
                 }
                 break;
         }
@@ -764,281 +868,359 @@ public class Hal9001Game {
         halSay("Crop care action recorded. Current crop health: " + intCrops + "/100.");
     }
 
-    // =========================================================================
-    // O - CREW CHECK-IN  (NEW)
-    // =========================================================================
-    static void crewCheckIn() {
-        printBoxHeader("CREW CHECK-IN");
+    static void crewCheckIn()
+    {
+        printBoxHeader("CREW CHECK-IN", CYAN);
         halSay("I will now assess individual crew wellbeing and provide targeted support.");
 
-        System.out.println("  1. HAL selects randomly");
-        System.out.println("  2. Choose a crewmate yourself");
-        int intMode = getIntInRange(sc, "  Enter choice (1-2): ", 1, 2);
+        System.out.println("  " + button("1", "HAL selects randomly"));
+        System.out.println("  " + button("2", "Choose a crewmate yourself"));
 
-        int intIndex;
-        if (intMode == 1) {
-            intIndex = rng.nextInt(intCrewCount);
-        } else {
-            intIndex = pickCrewmate();
-        }
+        int intMode = getIntInRange(sc, "\n  Enter choice (1-2): ", 1, 2);
+        int intIndex = (intMode == 1) ? rng.nextInt(intCrewCount) : pickCrewmate();
 
         System.out.println("\n  Checking in with " + arrNames[intIndex]
                 + " [" + arrIDs[intIndex] + "] ...\n");
 
-        // Show that crewmate's current stats
-        printBar("  Mood  ", intMood[intIndex],   10, false);
-        printBar("  Energy", intEnergy[intIndex], 10, false);
-        printBar("  Stress", intStress[intIndex], 10, true);
-        printBar("  Hunger", intHunger[intIndex], 10, true);
-        printBar("  Health", intHealth[intIndex], 10, false);
-        System.out.println();
+        printBar("Mood  ", intMood[intIndex], 10, false);
+        printBar("Energy", intEnergy[intIndex], 10, false);
+        printBar("Stress", intStress[intIndex], 10, true);
+        printBar("Hunger", intHunger[intIndex], 10, true);
+        printBar("Health", intHealth[intIndex], 10, false);
 
-        // Give tailored advice based on their worst stat
         boolean bolIssueFound = false;
 
-        if (intStress[intIndex] >= 7) {
+        if (intStress[intIndex] >= 7)
+        {
             halSay(arrNames[intIndex] + " is experiencing high stress.");
             System.out.println("  Recommendation: Use Rest Planner [M] or Schedule Recreation [D].");
             bolIssueFound = true;
         }
-        if (intEnergy[intIndex] <= 3) {
+        if (intEnergy[intIndex] <= 3)
+        {
             halSay(arrNames[intIndex] + " has critically low energy.");
             System.out.println("  Recommendation: Use Rest Planner [M] or Meal Tracker [L].");
             bolIssueFound = true;
         }
-        if (intHunger[intIndex] >= 6) {
+        if (intHunger[intIndex] >= 6)
+        {
             halSay(arrNames[intIndex] + " is experiencing significant hunger.");
             System.out.println("  Recommendation: Use Meal Tracker [L] as soon as possible.");
             bolIssueFound = true;
         }
-        if (intMood[intIndex] <= 4) {
+        if (intMood[intIndex] <= 4)
+        {
             halSay(arrNames[intIndex] + "'s mood is low.");
             System.out.println("  Recommendation: Use Crew Support Event [F] or Schedule Recreation [D].");
             bolIssueFound = true;
         }
-        if (intHealth[intIndex] <= 4) {
+        if (intHealth[intIndex] <= 4)
+        {
             halSay(arrNames[intIndex] + "'s health is deteriorating.");
             System.out.println("  Recommendation: Use Rest Planner [M] and assign lighter tasks only.");
             bolIssueFound = true;
         }
 
-        if (!bolIssueFound) {
+        if (!bolIssueFound)
+        {
             halSay(arrNames[intIndex] + " is doing well. No immediate intervention required.");
         }
     }
 
-    // =========================================================================
-    // WIN / LOSS
-    // =========================================================================
-
-    /** Checks all loss conditions. Returns a reason string, or null if no loss. */
-    static String checkLossConditions() {
-        if (intOxygen <= 0) return "Oxygen supply depleted. The crew could not breathe.";
-        if (intFood   <= 0) return "Food supply exhausted. The crew could not be fed.";
-        if (intWater  <= 0) return "Water reserves gone. The crew could not survive.";
-        if (intMorale <= 0) return "Ship morale collapsed. The crew lost hope.";
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
-            if (intHealth[intCount] <= 0)
-                return arrNames[intCount] + "'s health reached zero. A crewmate was lost.";
+    static String checkLossConditions()
+    {
+        if (intOxygen <= 0)
+        {
+            return "Oxygen supply depleted. The crew could not breathe.";
         }
+        if (intFood <= 0)
+        {
+            return "Food supply exhausted. The crew could not be fed.";
+        }
+        if (intWater <= 0)
+        {
+            return "Water reserves gone. The crew could not survive.";
+        }
+        if (intMorale <= 0)
+        {
+            return "Ship morale collapsed. The crew lost hope.";
+        }
+
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
+            if (intHealth[intCount] <= 0)
+            {
+                return arrNames[intCount] + "'s health reached zero. A crewmate was lost.";
+            }
+        }
+
         return null;
     }
 
-    /** Prints the victory screen with a morale-based ending. */
-    static void printVictory() {
-        System.out.println("\n  +====================================================+");
-        System.out.println("  |        MISSION COMPLETE -- Day 30 Reached!        |");
-        System.out.println("  +====================================================+");
-        if (intMorale >= 70) {
-            System.out.println("  ***  SUPPORTIVE MISSION SUCCESS  ***");
+    static void printVictory()
+    {
+        printBoxHeader("MISSION COMPLETE -- DAY 30 REACHED", GREEN);
+
+        if (intMorale >= 70)
+        {
+            System.out.println(GREEN + "  *** SUPPORTIVE MISSION SUCCESS ***" + RESET);
             System.out.println("  The crew not only survived -- they thrived.");
             System.out.println("  HAL 9001's consistent care made all the difference.");
-        } else if (intMorale >= 40) {
-            System.out.println("  ***  STABLE MISSION SUCCESS  ***");
+        }
+        else if (intMorale >= 40)
+        {
+            System.out.println(YELLOW + "  *** STABLE MISSION SUCCESS ***" + RESET);
             System.out.println("  The mission is complete. The crew held together.");
             System.out.println("  There were hard days, but HAL kept them going.");
-        } else {
-            System.out.println("  ***  DIFFICULT MISSION SUCCESS  ***");
+        }
+        else
+        {
+            System.out.println(RED + "  *** DIFFICULT MISSION SUCCESS ***" + RESET);
             System.out.println("  Against the odds, the mission was completed.");
             System.out.println("  HAL recommends reviewing crew wellness protocols.");
         }
+
         System.out.println("\n  Final Morale     : " + intMorale + "/100");
         System.out.println("  Final Mission Day: " + (intMissionDay - 1));
-        System.out.println("  +====================================================+");
     }
 
-    /** Prints the loss screen with the reason. */
-    static void printLoss(String strReason) {
-        System.out.println("\n  +====================================================+");
-        System.out.println("  |                 MISSION FAILURE                    |");
-        System.out.println("  +====================================================+");
-        System.out.println("  " + strReason);
+    static void printLoss(String strReason)
+    {
+        printBoxHeader("MISSION FAILURE", RED);
+        System.out.println(RED + "  " + strReason + RESET);
         halSay("\"I am sorry. I should have done more.\"");
         System.out.println("  Mission ended on Day " + intMissionDay + ".");
-        System.out.println("  +====================================================+");
     }
 
-    // =========================================================================
-    // CRITICAL RESOURCE WARNINGS
-    // =========================================================================
-
-    /** Prints !!! WARNING lines for any resource below 40. */
-    static void printResourceWarnings() {
-        if (intOxygen < 40) System.out.println("\n  !!! WARNING: OXYGEN BELOW 40% !!!");
-        if (intFood   < 40) System.out.println("  !!! WARNING: FOOD BELOW 40% !!!");
-        if (intWater  < 40) System.out.println("  !!! WARNING: WATER BELOW 40% !!!");
-        if (intCrops  < 40) System.out.println("  !!! WARNING: CROP HEALTH BELOW 40% !!!");
-        if (intMorale < 40) System.out.println("  !!! WARNING: MORALE BELOW 40% !!!");
-    }
-
-    // =========================================================================
-    // UTILITY / HELPER METHODS
-    // =========================================================================
-
-    /**
-     * Displays a numbered list of all crewmates and asks the user to pick one.
-     * Returns the zero-based crew index.
-     */
-    static int pickCrewmate() {
-        System.out.println("\n  Select a crewmate:");
-        for (int intCount = 0; intCount < intCrewCount; intCount++) {
-            System.out.println("    " + (intCount + 1) + ". "
-                    + arrNames[intCount]
-                    + "  [Shift " + chrShifts[intCount] + "]"
-                    + "  Health: " + intHealth[intCount]
-                    + "  Energy: " + intEnergy[intCount]);
+    static void printResourceWarnings()
+    {
+        if (intOxygen < 40)
+        {
+            System.out.println(RED + "\n  !!! WARNING: OXYGEN BELOW 40% !!!" + RESET);
         }
-        return getIntInRange(sc, "  Enter number: ", 1, intCrewCount) - 1;
+        if (intFood < 40)
+        {
+            System.out.println(RED + "  !!! WARNING: FOOD BELOW 40% !!!" + RESET);
+        }
+        if (intWater < 40)
+        {
+            System.out.println(RED + "  !!! WARNING: WATER BELOW 40% !!!" + RESET);
+        }
+        if (intCrops < 40)
+        {
+            System.out.println(RED + "  !!! WARNING: CROP HEALTH BELOW 40% !!!" + RESET);
+        }
+        if (intMorale < 40)
+        {
+            System.out.println(RED + "  !!! WARNING: MORALE BELOW 40% !!!" + RESET);
+        }
     }
 
-    /**
-     * Prints a HAL 9001 voice line in a consistent style.
-     * Example output:
-     *   HAL 9001: I have reviewed the current crew conditions.
-     */
-    static void halSay(String strMessage) {
-        System.out.println("\n  HAL 9001: " + strMessage);
+    static int pickCrewmate()
+    {
+        System.out.println("\n  Select a crewmate:");
+
+        for (int intCount = 0; intCount < intCrewCount; intCount++)
+        {
+            System.out.println("  " + button("" + (intCount + 1),
+                    arrNames[intCount]
+                    + " | Shift " + chrShifts[intCount]
+                    + " | Health " + intHealth[intCount]
+                    + " | Energy " + intEnergy[intCount]));
+        }
+
+        return getIntInRange(sc, "\n  Enter number: ", 1, intCrewCount) - 1;
     }
 
-    /**
-     * Prints a consistent boxed section header.
-     * Example:
-     *   +--------------------------------------------------+
-     *   | CREW STATUS                                      |
-     *   +--------------------------------------------------+
-     */
-    static void printBoxHeader(String strTitle) {
-        // Box is 50 characters wide inside the border
-        String strPadded = String.format("%-50s", " " + strTitle);
-        System.out.println("\n  +--------------------------------------------------+");
+    static void halSay(String strMessage)
+    {
+        System.out.println(CYAN + "\n  HAL 9001: " + RESET + strMessage);
+    }
+
+    static void printBoxHeader(String strTitle, String strColor)
+    {
+        String strPadded = String.format("%-60s", " " + strTitle);
+        System.out.println(strColor + "\n  +------------------------------------------------------------+");
         System.out.println("  |" + strPadded + "|");
-        System.out.println("  +--------------------------------------------------+");
+        System.out.println("  +------------------------------------------------------------+" + RESET);
     }
 
-    /**
-     * Prints a visual stat/resource bar with a status label.
-     *
-     * bolInverted = false  (normal stats: high is good)
-     *   CRITICAL <= 20%  |  LOW <= 40%  |  OK <= 60%  |  GOOD <= 80%  |  HIGH > 80%
-     *
-     * bolInverted = true  (Stress, Hunger: high is bad)
-     *   LOW <= 20%  |  OK <= 60%  |  HIGH <= 80%  |  CRITICAL > 80%
-     *
-     * Example output:
-     *   Mood  : [********  ] 8/10  GOOD
-     *   Stress: [********  ] 8/10  HIGH
-     */
-    static void printBar(String strLabel, int intValue, int intMax, boolean bolInverted) {
-        // Build the 10-segment fill bar
+    static String button(String strKey, String strText)
+    {
+        return CYAN + "[" + strKey + "]" + RESET + " " + strText;
+    }
+
+    static void printBar(String strLabel, int intValue, int intMax, boolean bolInverted)
+    {
         int intFilled = (int) Math.round((double) intValue / intMax * 10);
+
         StringBuilder strBar = new StringBuilder("[");
-        for (int i = 0; i < 10; i++) {
-            strBar.append(i < intFilled ? "*" : " ");
+        for (int i = 0; i < 10; i++)
+        {
+            if (i < intFilled)
+            {
+                strBar.append("█");
+            }
+            else
+            {
+                strBar.append(" ");
+            }
         }
         strBar.append("]");
 
-        // Choose the status label
         double dblRatio = (double) intValue / intMax;
         String strStatusLabel;
-        if (!bolInverted) {
-            if (dblRatio <= 0.2)      strStatusLabel = "CRITICAL";
-            else if (dblRatio <= 0.4) strStatusLabel = "LOW";
-            else if (dblRatio <= 0.6) strStatusLabel = "OK";
-            else if (dblRatio <= 0.8) strStatusLabel = "GOOD";
-            else                      strStatusLabel = "HIGH";
-        } else {
-            if (dblRatio <= 0.2)      strStatusLabel = "LOW";
-            else if (dblRatio <= 0.6) strStatusLabel = "OK";
-            else if (dblRatio <= 0.8) strStatusLabel = "HIGH";
-            else                      strStatusLabel = "CRITICAL";
-        }
+        String strColor;
 
-        System.out.printf("  %s: %s %d/%d  %s%n",
-                strLabel, strBar.toString(), intValue, intMax, strStatusLabel);
-    }
-
-    /**
-     * Prompts the user for an integer in [intMin, intMax].
-     * Uses try/catch to trap InputMismatchException.
-     * Repeats until a valid value is entered.
-     */
-    static int getIntInRange(Scanner sc, String strPrompt, int intMin, int intMax) {
-        int     intValue = intMin - 1;
-        boolean bolValid = false;
-        while (!bolValid) {
-            System.out.print(strPrompt);
-            try {
-                intValue = sc.nextInt();
-                sc.nextLine(); // consume leftover newline
-                if (intValue >= intMin && intValue <= intMax) {
-                    bolValid = true;
-                } else {
-                    System.out.println("  Please enter a number between "
-                            + intMin + " and " + intMax + ".");
-                }
-            } catch (InputMismatchException e) {
-                System.out.println("  Invalid input. Please enter a whole number.");
-                sc.nextLine(); // discard the bad token
+        if (!bolInverted)
+        {
+            if (dblRatio <= 0.2)
+            {
+                strStatusLabel = "CRITICAL";
+                strColor = RED;
+            }
+            else if (dblRatio <= 0.4)
+            {
+                strStatusLabel = "LOW";
+                strColor = YELLOW;
+            }
+            else if (dblRatio <= 0.6)
+            {
+                strStatusLabel = "OK";
+                strColor = BLUE;
+            }
+            else if (dblRatio <= 0.8)
+            {
+                strStatusLabel = "GOOD";
+                strColor = GREEN;
+            }
+            else
+            {
+                strStatusLabel = "HIGH";
+                strColor = GREEN;
             }
         }
+        else
+        {
+            if (dblRatio <= 0.2)
+            {
+                strStatusLabel = "LOW";
+                strColor = GREEN;
+            }
+            else if (dblRatio <= 0.6)
+            {
+                strStatusLabel = "OK";
+                strColor = BLUE;
+            }
+            else if (dblRatio <= 0.8)
+            {
+                strStatusLabel = "HIGH";
+                strColor = YELLOW;
+            }
+            else
+            {
+                strStatusLabel = "CRITICAL";
+                strColor = RED;
+            }
+        }
+
+        System.out.printf("  %-8s: %s%s%s %3d/%-3d %s%s%s%n",
+                strLabel, strColor, strBar.toString(), RESET,
+                intValue, intMax, strColor, strStatusLabel, RESET);
+    }
+
+    static int getIntInRange(Scanner sc, String strPrompt, int intMin, int intMax)
+    {
+        int intValue = intMin - 1;
+        boolean bolValid = false;
+
+        while (!bolValid)
+        {
+            System.out.print(strPrompt);
+
+            try
+            {
+                intValue = sc.nextInt();
+                sc.nextLine();
+
+                if (intValue >= intMin && intValue <= intMax)
+                {
+                    bolValid = true;
+                }
+                else
+                {
+                    System.out.println(YELLOW + "  Please enter a number between "
+                            + intMin + " and " + intMax + "." + RESET);
+                }
+            }
+            catch (InputMismatchException e)
+            {
+                System.out.println(YELLOW + "  Invalid input. Please enter a whole number." + RESET);
+                sc.nextLine();
+            }
+        }
+
         return intValue;
     }
 
-    /**
-     * Reads one line of input, strips whitespace, converts to uppercase,
-     * and returns the first character.
-     */
-    static char getCharChoice(Scanner sc, String strPrompt) {
+    static char getCharChoice(Scanner sc, String strPrompt)
+    {
         System.out.print(strPrompt);
         String strInput = sc.nextLine().trim().toUpperCase();
-        if (strInput.length() == 0) return ' ';
+
+        if (strInput.length() == 0)
+        {
+            return ' ';
+        }
+
         return strInput.charAt(0);
     }
 
-    /**
-     * Clamps a crew stat value to the range [0, 10].
-     */
-    static int limitStat(int intValue) {
-        if (intValue < 0)  return 0;
-        if (intValue > 10) return 10;
+    static int limitStat(int intValue)
+    {
+        if (intValue < 0)
+        {
+            return 0;
+        }
+        if (intValue > 10)
+        {
+            return 10;
+        }
         return intValue;
     }
 
-    /**
-     * Clamps a ship resource value to the range [0, 100].
-     */
-    static int limitResource(int intValue) {
-        if (intValue < 0)   return 0;
-        if (intValue > 100) return 100;
+    static int limitResource(int intValue)
+    {
+        if (intValue < 0)
+        {
+            return 0;
+        }
+        if (intValue > 100)
+        {
+            return 100;
+        }
         return intValue;
     }
 
-    /**
-     * Pauses the game loop until the user presses Enter.
-     */
-    static void pressEnter() {
-        System.out.print("\n  [ Press Enter to continue... ]");
+    static void pressEnter()
+    {
+        System.out.print(DIM + "\n  [ Press Enter to continue... ]" + RESET);
         sc.nextLine();
     }
 
-} // end class Hal9001Game
+    static void clearScreen()
+    {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
+    static void printTransitionScreen()
+    {
+        System.out.println();
+        System.out.println(PURPLE + "  +--------------------------------------------------+");
+        System.out.println("  |   Systems dimming...                             |");
+        System.out.println("  |   Crew entering rest cycle...                    |");
+        System.out.printf( "  |   Mission Day %-3d initialized.                  |%n", intMissionDay);
+        System.out.println("  +--------------------------------------------------+" + RESET);
+    }
+}
